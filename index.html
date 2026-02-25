@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rimachy Financial Services</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+ --primary:#a30000;
+ --dark:#7a0000;
+ --gold:#f4a300;
+ --light:#f4f4f4;
+}
+
+body{
+ margin:0;
+ font-family:Arial, sans-serif;
+ background:var(--light);
+}
+
+header{
+ background: linear-gradient(135deg,var(--dark),var(--primary));
+ color:#fff;
+ padding:20px;
+ text-align:center;
+ border-bottom:4px solid var(--gold);
+}
+
+header h2{
+ margin:0;
+ font-size:26px;
+}
+
+header small{
+ color:#ffe6e6;
+ font-size:14px;
+}
+
+.container{
+ max-width:900px;
+ margin:auto;
+ padding:15px;
+}
+
+.box{
+ background:#fff;
+ padding:20px;
+ margin-bottom:20px;
+ border-radius:10px;
+ box-shadow:0 5px 15px rgba(0,0,0,0.08);
+}
+
+h3{color:var(--primary);}
+
+input,select,textarea,button{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+ border-radius:6px;
+ border:1px solid #ddd;
+ font-size:14px;
+}
+
+button{
+ background: linear-gradient(135deg,var(--gold),#ffcc00);
+ border:none;
+ font-weight:bold;
+ cursor:pointer;
+ transition:0.3s;
+}
+
+button:hover{transform:scale(1.03);}
+
+.clearBtn{
+ background:#444;
+ color:#fff;
+}
+
+#errorMsg{
+ color:red;
+ font-weight:bold;
+}
+
+canvas{
+ width:100%;
+ height:180px;
+ border:2px dashed #ccc;
+ touch-action:none;
+ border-radius:8px;
+}
+
+.footer{
+ background:var(--dark);
+ color:#fff;
+ padding:20px;
+ text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>Rimachy <span style="color:#f4a300;">Financial Services</span></h2>
+<small>Best Services Guaranteed • Fast Approval • Secure Online Application</small>
+</header>
+
+<div class="container">
+
+<!-- Loan Calculator -->
+<div class="box">
+<h3>Loan Calculator</h3>
+<input id="amount" type="number" placeholder="Loan Amount (ZMW)" min="200" max="20000">
+
+<select id="duration">
+<option value="">Select Duration</option>
+<option value="1w">1 Week</option>
+<option value="2w">2 Weeks</option>
+<option value="3w">3 Weeks</option>
+<option value="1m">1 Month</option>
+</select>
+
+<p>Interest Rate: <b><span id="rate">0%</span></b></p>
+<p>Total Payable: <b>ZMW <span id="total">0.00</span></b></p>
+<p><small>⚠ Overdue payments attract 0.5% per day</small></p>
+
+<button id="calcBtn">Calculate</button>
+<p id="errorMsg"></p>
+
+<p style="font-size:12px;">
+By applying, you agree to our loan terms and consent to identity verification.
+Failure to repay may affect your credit status.
+</p>
+</div>
+
+<!-- Loan Application -->
+<div class="box">
+<h3>Loan Application</h3>
+
+<input id="name" placeholder="Full Name">
+<input id="phone" placeholder="Phone Number">
+<input id="nrc" placeholder="NRC Number">
+
+<select id="status">
+<option value="">Status</option>
+<option>Student</option>
+<option>Employed</option>
+<option>Business Owner</option>
+</select>
+
+<select id="location">
+<option value="">Location</option>
+<option>Lusaka</option>
+<option>Copperbelt</option>
+<option>Central</option>
+<option>Eastern</option>
+<option>Northern</option>
+<option>Southern</option>
+<option>Western</option>
+<option>Muchinga</option>
+</select>
+
+<select id="payment">
+<option value="">Payment Method</option>
+<option>Mobile Money</option>
+<option>Bank Transfer</option>
+<option>Cash</option>
+</select>
+
+<h4>Next of Kin</h4>
+<input id="kinName" placeholder="Full Name">
+<input id="kinPhone" placeholder="Phone Number">
+
+<!-- ✅ COLLATERAL SECTION ADDED -->
+<h4>Collateral Information</h4>
+
+<select id="collateralType">
+<option value="">Select Collateral Type</option>
+<option>Motor Vehicle</option>
+<option>Motorcycle</option>
+<option>Land Title</option>
+<option>House</option>
+<option>Electronics</option>
+<option>Other</option>
+</select>
+
+<textarea id="collateralDesc" placeholder="Describe the collateral (model, condition, value, etc)"></textarea>
+
+<label>Collateral Photo</label>
+<input type="file" id="collateralPhoto" accept="image/*">
+
+<label>NRC Front</label>
+<input type="file" id="nrcFront" accept="image/*">
+
+<label>NRC Back</label>
+<input type="file" id="nrcBack" accept="image/*">
+
+<label>Face Photo</label>
+<input type="file" id="facePhoto" accept="image/*">
+
+<textarea id="purpose" placeholder="Purpose of Loan"></textarea>
+
+<h4>Applicant Signature</h4>
+<small>Sign below to confirm details</small>
+<canvas id="signature"></canvas>
+<button type="button" class="clearBtn" id="clearSign">Clear Signature</button>
+
+<button id="submitBtn">Submit Application</button>
+<p id="msg"></p>
+
+</div>
+</div>
+
+<div class="footer">
+<p><b>Contact Us</b></p>
+<p>📞 +260 976 277 022 | +260 964 348 893</p>
+<p>✉ RimachyFinancialServices@gmail.com</p>
+<p>© 2026 Rimachy Financial Services</p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+const firebaseConfig = {
+ apiKey: "YOUR_API_KEY",
+ authDomain: "aot-loans.firebaseapp.com",
+ projectId: "aot-loans",
+ storageBucket: "aot-loans.firebasestorage.app",
+ messagingSenderId: "1023143461166",
+ appId: "1:1023143461166:web:7025fd84b752fa26753abf"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const rates = {"1w":15,"2w":25,"3w":30,"1m":40};
+
+const amountEl=document.getElementById("amount");
+const durationEl=document.getElementById("duration");
+const rateEl=document.getElementById("rate");
+const totalEl=document.getElementById("total");
+const errorEl=document.getElementById("errorMsg");
+
+document.getElementById("calcBtn").onclick=()=>{
+ const amount=Number(amountEl.value);
+ if(!amount||!durationEl.value)return;
+
+ if(amount<200||amount>20000){
+  errorEl.innerText="Loan amount must be between K200 and K20,000";
+  return;
+ }
+
+ let r=rates[durationEl.value];
+ totalEl.innerText=(amount+(amount*r/100)).toFixed(2);
+ rateEl.innerText=r+"%";
+ errorEl.innerText="";
+};
+
+const canvas=document.getElementById("signature");
+const ctx=canvas.getContext("2d");
+let drawing=false;
+
+canvas.width=canvas.offsetWidth;
+canvas.height=180;
+ctx.lineWidth=2;
+
+canvas.onmousedown=e=>{
+ drawing=true;
+ ctx.beginPath();
+ ctx.moveTo(e.offsetX,e.offsetY);
+};
+
+canvas.onmousemove=e=>{
+ if(!drawing)return;
+ ctx.lineTo(e.offsetX,e.offsetY);
+ ctx.stroke();
+};
+
+canvas.onmouseup=()=>drawing=false;
+document.getElementById("clearSign").onclick=()=>ctx.clearRect(0,0,canvas.width,canvas.height);
+
+document.getElementById("submitBtn").onclick=async()=>{
+ document.getElementById("msg").innerText="Application submitted successfully ✔";
+};
+</script>
+
+</body>
+</html>
