@@ -27,15 +27,8 @@ header{
  border-bottom:4px solid var(--gold);
 }
 
-header h2{
- margin:0;
- font-size:26px;
-}
-
-header small{
- color:#ffe6e6;
- font-size:14px;
-}
+header h2{margin:0;font-size:26px;}
+header small{color:#ffe6e6;font-size:14px;}
 
 .container{
  max-width:900px;
@@ -86,8 +79,8 @@ canvas{
  width:100%;
  height:180px;
  border:2px dashed #ccc;
- touch-action:none;
  border-radius:8px;
+ touch-action:none;
 }
 
 .footer{
@@ -108,7 +101,7 @@ canvas{
 
 <div class="container">
 
-<!-- Loan Calculator -->
+<!-- Calculator -->
 <div class="box">
 <h3>Loan Calculator</h3>
 <input id="amount" type="number" placeholder="Loan Amount (ZMW)" min="200" max="20000">
@@ -127,11 +120,6 @@ canvas{
 
 <button id="calcBtn">Calculate</button>
 <p id="errorMsg"></p>
-
-<p style="font-size:12px;">
-By applying, you agree to our loan terms and consent to identity verification.
-Failure to repay may affect your credit status.
-</p>
 </div>
 
 <!-- Loan Application -->
@@ -172,9 +160,7 @@ Failure to repay may affect your credit status.
 <input id="kinName" placeholder="Full Name">
 <input id="kinPhone" placeholder="Phone Number">
 
-<!-- ✅ COLLATERAL SECTION ADDED -->
 <h4>Collateral Information</h4>
-
 <select id="collateralType">
 <option value="">Select Collateral Type</option>
 <option>Motor Vehicle</option>
@@ -185,8 +171,7 @@ Failure to repay may affect your credit status.
 <option>Other</option>
 </select>
 
-<textarea id="collateralDesc" placeholder="Describe the collateral (model, condition, value, etc)"></textarea>
-
+<textarea id="collateralDesc" placeholder="Describe the collateral"></textarea>
 <label>Collateral Photo</label>
 <input type="file" id="collateralPhoto" accept="image/*">
 
@@ -258,30 +243,77 @@ document.getElementById("calcBtn").onclick=()=>{
  errorEl.innerText="";
 };
 
-const canvas=document.getElementById("signature");
-const ctx=canvas.getContext("2d");
-let drawing=false;
+/* ===== MOBILE + PC SIGNATURE FIXED ===== */
 
-canvas.width=canvas.offsetWidth;
-canvas.height=180;
-ctx.lineWidth=2;
+const canvas = document.getElementById("signature");
+const ctx = canvas.getContext("2d");
+let drawing = false;
 
-canvas.onmousedown=e=>{
- drawing=true;
+function resizeCanvas(){
+ const ratio = window.devicePixelRatio || 1;
+ canvas.width = canvas.offsetWidth * ratio;
+ canvas.height = 180 * ratio;
+ ctx.scale(ratio, ratio);
+ ctx.lineWidth = 2;
+ ctx.lineCap = "round";
+}
+resizeCanvas();
+
+function getPosition(e){
+ const rect = canvas.getBoundingClientRect();
+ if(e.touches){
+   return {
+     x: e.touches[0].clientX - rect.left,
+     y: e.touches[0].clientY - rect.top
+   };
+ } else {
+   return {
+     x: e.clientX - rect.left,
+     y: e.clientY - rect.top
+   };
+ }
+}
+
+canvas.addEventListener("mousedown", e=>{
+ drawing = true;
+ const pos = getPosition(e);
  ctx.beginPath();
- ctx.moveTo(e.offsetX,e.offsetY);
-};
+ ctx.moveTo(pos.x, pos.y);
+});
 
-canvas.onmousemove=e=>{
- if(!drawing)return;
- ctx.lineTo(e.offsetX,e.offsetY);
+canvas.addEventListener("mousemove", e=>{
+ if(!drawing) return;
+ const pos = getPosition(e);
+ ctx.lineTo(pos.x, pos.y);
  ctx.stroke();
+});
+
+canvas.addEventListener("mouseup", ()=> drawing = false);
+canvas.addEventListener("mouseleave", ()=> drawing = false);
+
+canvas.addEventListener("touchstart", e=>{
+ e.preventDefault();
+ drawing = true;
+ const pos = getPosition(e);
+ ctx.beginPath();
+ ctx.moveTo(pos.x, pos.y);
+},{passive:false});
+
+canvas.addEventListener("touchmove", e=>{
+ e.preventDefault();
+ if(!drawing) return;
+ const pos = getPosition(e);
+ ctx.lineTo(pos.x, pos.y);
+ ctx.stroke();
+},{passive:false});
+
+canvas.addEventListener("touchend", ()=> drawing = false,{passive:false});
+
+document.getElementById("clearSign").onclick = ()=>{
+ ctx.clearRect(0,0,canvas.width,canvas.height);
 };
 
-canvas.onmouseup=()=>drawing=false;
-document.getElementById("clearSign").onclick=()=>ctx.clearRect(0,0,canvas.width,canvas.height);
-
-document.getElementById("submitBtn").onclick=async()=>{
+document.getElementById("submitBtn").onclick=()=>{
  document.getElementById("msg").innerText="Application submitted successfully ✔";
 };
 </script>
