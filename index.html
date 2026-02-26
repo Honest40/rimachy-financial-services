@@ -208,6 +208,7 @@ canvas{
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
+// ===== FIREBASE CONFIG =====
 const firebaseConfig = {
  apiKey: "YOUR_API_KEY",
  authDomain: "aot-loans.firebaseapp.com",
@@ -216,106 +217,133 @@ const firebaseConfig = {
  messagingSenderId: "1023143461166",
  appId: "1:1023143461166:web:7025fd84b752fa26753abf"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// ===== ELEMENTS =====
+const nameEl = document.getElementById("name");
+const phoneEl = document.getElementById("phone");
+const nrcEl = document.getElementById("nrc");
+const statusEl = document.getElementById("status");
+const locationEl = document.getElementById("location");
+const paymentEl = document.getElementById("payment");
+const kinNameEl = document.getElementById("kinName");
+const kinPhoneEl = document.getElementById("kinPhone");
+const amountEl = document.getElementById("amount");
+const durationEl = document.getElementById("duration");
+const purposeEl = document.getElementById("purpose");
+const collateralPhotoEl = document.getElementById("collateralPhoto");
+const nrcFrontEl = document.getElementById("nrcFront");
+const nrcBackEl = document.getElementById("nrcBack");
+const facePhotoEl = document.getElementById("facePhoto");
+const msgEl = document.getElementById("msg");
+const errorEl = document.getElementById("errorMsg");
+const rateEl = document.getElementById("rate");
+const totalEl = document.getElementById("total");
+const calcBtn = document.getElementById("calcBtn");
+const submitBtn = document.getElementById("submitBtn");
+
+// ===== LOAN CALCULATOR =====
 const rates = {"1w":15,"2w":25,"3w":30,"1m":40};
+calcBtn.addEventListener("click", ()=>{
+ const amount = Number(amountEl.value);
+ if(!amount||!durationEl.value){rateEl.innerText="0%";totalEl.innerText="0.00";return;}
+ if(amount<200 || amount>20000){errorEl.innerText="Loan amount must be between K200 and K20,000";return;}
+ const r = rates[durationEl.value];
+ totalEl.innerText = (amount + amount*r/100).toFixed(2);
+ rateEl.innerText = r+"%";
+ errorEl.innerText = "";
+});
 
-const amountEl=document.getElementById("amount");
-const durationEl=document.getElementById("duration");
-const rateEl=document.getElementById("rate");
-const totalEl=document.getElementById("total");
-const errorEl=document.getElementById("errorMsg");
-
-document.getElementById("calcBtn").onclick=()=>{
- const amount=Number(amountEl.value);
- if(!amount||!durationEl.value)return;
-
- if(amount<200||amount>20000){
-  errorEl.innerText="Loan amount must be between K200 and K20,000";
-  return;
- }
-
- let r=rates[durationEl.value];
- totalEl.innerText=(amount+(amount*r/100)).toFixed(2);
- rateEl.innerText=r+"%";
- errorEl.innerText="";
-};
-
-/* ===== MOBILE + PC SIGNATURE FIXED ===== */
-
-const canvas = document.getElementById("signature");
-const ctx = canvas.getContext("2d");
-let drawing = false;
+// ===== SIGNATURE =====
+const canvas=document.getElementById("signature");
+const ctx=canvas.getContext("2d");
+let drawing=false;
 
 function resizeCanvas(){
- const ratio = window.devicePixelRatio || 1;
- canvas.width = canvas.offsetWidth * ratio;
- canvas.height = 180 * ratio;
- ctx.scale(ratio, ratio);
- ctx.lineWidth = 2;
- ctx.lineCap = "round";
+ const ratio=window.devicePixelRatio||1;
+ canvas.width=canvas.offsetWidth*ratio;
+ canvas.height=180*ratio;
+ ctx.scale(ratio,ratio);
+ ctx.lineWidth=2;
+ ctx.lineCap="round";
 }
 resizeCanvas();
 
-function getPosition(e){
- const rect = canvas.getBoundingClientRect();
- if(e.touches){
-   return {
-     x: e.touches[0].clientX - rect.left,
-     y: e.touches[0].clientY - rect.top
-   };
- } else {
-   return {
-     x: e.clientX - rect.left,
-     y: e.clientY - rect.top
-   };
- }
+function pos(e){const r=canvas.getBoundingClientRect();
+ if(e.touches) return {x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};
+ return {x:e.clientX-r.left,y:e.clientY-r.top};
+}
+canvas.addEventListener("mousedown",e=>{drawing=true; const p=pos(e); ctx.beginPath();ctx.moveTo(p.x,p.y);});
+canvas.addEventListener("mousemove",e=>{if(!drawing)return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke();});
+canvas.addEventListener("mouseup",()=>drawing=false);
+canvas.addEventListener("mouseleave",()=>drawing=false);
+canvas.addEventListener("touchstart",e=>{e.preventDefault();drawing=true; const p=pos(e); ctx.beginPath();ctx.moveTo(p.x,p.y);},{passive:false});
+canvas.addEventListener("touchmove",e=>{e.preventDefault();if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();},{passive:false});
+canvas.addEventListener("touchend",()=>drawing=false,{passive:false});
+document.getElementById("clearSign").onclick=()=>ctx.clearRect(0,0,canvas.width,canvas.height);
+
+// ===== CLOUDINARY =====
+async function uploadToCloudinary(file, folder){
+ if(!file) return "";
+ const url="https://api.cloudinary.com/v1_1/dc5moeafv/upload";
+ const preset="zedmarket";
+ const formData = new FormData();
+ formData.append("file",file);
+ formData.append("upload_preset",preset);
+ formData.append("folder",folder);
+ const res = await fetch(url,{method:"POST",body:formData});
+ const data = await res.json();
+ return data.secure_url;
 }
 
-canvas.addEventListener("mousedown", e=>{
- drawing = true;
- const pos = getPosition(e);
- ctx.beginPath();
- ctx.moveTo(pos.x, pos.y);
-});
+// ===== SUBMIT APPLICATION =====
+submitBtn.addEventListener("click", async ()=>{
+ msgEl.style.color="black"; msgEl.innerText="Submitting..."; errorEl.innerText="";
+ if(canvas.toDataURL().length<2000){errorEl.innerText="Please sign before submitting!"; msgEl.innerText=""; return;}
+ const signBlob = await (await fetch(canvas.toDataURL())).blob();
+ const signatureURL = await uploadToCloudinary(signBlob,"signatures");
 
-canvas.addEventListener("mousemove", e=>{
- if(!drawing) return;
- const pos = getPosition(e);
- ctx.lineTo(pos.x, pos.y);
- ctx.stroke();
-});
+ const [collateralURL,nrcFrontURL,nrcBackURL,faceURL] = await Promise.all([
+   uploadToCloudinary(collateralPhotoEl.files[0],"collateral"),
+   uploadToCloudinary(nrcFrontEl.files[0],"nrcFront"),
+   uploadToCloudinary(nrcBackEl.files[0],"nrcBack"),
+   uploadToCloudinary(facePhotoEl.files[0],"facePhoto")
+ ]);
 
-canvas.addEventListener("mouseup", ()=> drawing = false);
-canvas.addEventListener("mouseleave", ()=> drawing = false);
+ const r = rates[durationEl.value]||0;
+ const totalAmount = Number(amountEl.value) + Number(amountEl.value)*r/100;
 
-canvas.addEventListener("touchstart", e=>{
- e.preventDefault();
- drawing = true;
- const pos = getPosition(e);
- ctx.beginPath();
- ctx.moveTo(pos.x, pos.y);
-},{passive:false});
+ await addDoc(collection(db,"loanApplications"),{
+   name:nameEl.value,
+   phone:phoneEl.value,
+   nrc:nrcEl.value,
+   status:statusEl.value,
+   location:locationEl.value,
+   payment:paymentEl.value,
+   kin:{name:kinNameEl.value,phone:kinPhoneEl.value},
+   amount:Number(amountEl.value),
+   duration:durationEl.value,
+   rate:r,
+   total:totalAmount,
+   collateralPhoto:collateralURL,
+   nrcFront:nrcFrontURL,
+   nrcBack:nrcBackURL,
+   facePhoto:faceURL,
+   purpose:purposeEl.value,
+   signature:signatureURL,
+   loanStatus:"Pending",
+   created:new Date()
+ });
 
-canvas.addEventListener("touchmove", e=>{
- e.preventDefault();
- if(!drawing) return;
- const pos = getPosition(e);
- ctx.lineTo(pos.x, pos.y);
- ctx.stroke();
-},{passive:false});
+ msgEl.style.color="green";
+ msgEl.innerText="Application submitted successfully ✔";
 
-canvas.addEventListener("touchend", ()=> drawing = false,{passive:false});
-
-document.getElementById("clearSign").onclick = ()=>{
+// reset form
+ document.querySelectorAll("input,select,textarea").forEach(el=>el.value="");
  ctx.clearRect(0,0,canvas.width,canvas.height);
-};
 
-document.getElementById("submitBtn").onclick=()=>{
- document.getElementById("msg").innerText="Application submitted successfully ✔";
-};
+});
 </script>
 
 </body>
